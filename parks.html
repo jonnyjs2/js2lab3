@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en-US">
+ <head>
+    <meta charset="utf-8">
+    <title>Seattle Parks</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+            flex-direction: row;
+            align-items: stretch;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #side-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 400px;
+            max-height: 90vh;
+            background: rgba(255,255,255,0.95);
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1;
+        }
+
+
+        button {
+            margin-bottom: 10px;
+        }
+
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 16px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        @media (max-width: 1024px) {
+            #side-panel {
+                display: none;
+            }
+}
+    </style>
+</head> 
+ <body>
+   <main id="container">
+       <div id="side-panel">
+
+           <h2>Seattle Parks</h2>
+           <button>Sort by PMA(desc) <br> (may take a few seconds)</button>
+
+           <table>
+               <tr>
+                <th>Park Name</th>
+                <th>PMA</th>
+                <th>Area (sq.m)</th>
+             </tr>
+           </table>
+
+       </div>
+       <div id="map"></div>
+   </main>
+   <script>
+mapboxgl.accessToken = 'pk.eyJ1Ijoiam9ubnlqczIiLCJhIjoiY21oZG56a3h5MDUybzJscHU5dDlveHEyMyJ9.Zj4MO5kQbqLf6QDwWWTs2A';
+
+let map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/outdoors-v12',
+    zoom: 11,
+    center: [-122.335167, 47.608013]
+});
+
+async function geojsonFetch() {
+    let response, parks, neighborhoods;
+
+    response = await fetch('assets/parks.geojson');
+    parks = await response.json();
+
+    response = await fetch('assets/neighborhoods.geojson');
+    neighborhoods = await response.json();
+
+    let table = document.getElementsByTagName("table")[0];
+    let row, cell1, cell2, cell3;
+
+    for (let i = 0; i < parks.features.length; i++) {
+        row = table.insertRow(-1);
+        cell1 = row.insertCell(0);
+        cell2 = row.insertCell(1);
+        cell3 = row.insertCell(2);
+
+        cell1.innerHTML = parks.features[i].properties.NAME;
+        cell2.innerHTML = parks.features[i].properties.PMA;
+        cell3.innerHTML = parks.features[i].properties.PARKSBND_AREA.toFixed(0);
+    }
+
+    map.on('load', function() {
+        map.addSource('parks', { type: 'geojson', data: parks });
+        map.addLayer({
+            id: 'parks-layer',
+            type: 'circle',
+            source: 'parks',
+            paint: {
+                'circle-radius': 6,
+                'circle-color': '#2ecc71',
+                'circle-stroke-color': '#1abc9c',
+                'circle-stroke-width': 2
+            }
+        });
+
+        map.addSource('neighborhoods', { type: 'geojson', data: neighborhoods });
+        map.addLayer({
+            id: 'neighborhoods-layer',
+            type: 'fill',
+            source: 'neighborhoods',
+            paint: {
+                'fill-color': '#3498db',
+                'fill-opacity': 0.3
+            }
+        });
+    });
+}
+
+geojsonFetch();
+
+let btn = document.getElementsByTagName("button")[0];
+
+        btn.addEventListener('click', sortTable);
+
+
+function sortTable(e) {
+            let table, rows, switching, i, x, y, shouldSwitch;
+            table = document.getElementsByTagName("table")[0];
+            switching = true;
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = parseFloat(rows[i].getElementsByTagName("td")[1].innerHTML);
+                    y = parseFloat(rows[i + 1].getElementsByTagName("td")[1].innerHTML);
+                    if (x < y) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                }
+            }
+        }
+        </script>
+    </body>
+</html>    
